@@ -1733,6 +1733,37 @@ class TabManager: ObservableObject {
         applyWorkspaceColor(color, toWorkspaceIds: workspaceIds)
     }
 
+    func setTabIcon(tabId: UUID, icon: WorkspaceIcon?) {
+        guard let tab = tabs.first(where: { $0.id == tabId }) else { return }
+        tab.setIcon(icon)
+    }
+
+    /// Shared mutation path for setting (or clearing, with `nil`) a workspace
+    /// icon across one or more selected workspaces.
+    func setWorkspaceIcon(_ icon: WorkspaceIcon?, toWorkspaceIds workspaceIds: [UUID]) {
+        guard !workspaceIds.isEmpty else { return }
+        if workspaceIds.count == 1, let workspaceId = workspaceIds.first {
+            setTabIcon(tabId: workspaceId, icon: icon)
+            return
+        }
+
+        let targetIds = Set(workspaceIds)
+        var assignedFirstImage = false
+        for tab in tabs where targetIds.contains(tab.id) {
+            // Give each workspace its own copy of a custom image so clearing or
+            // replacing one workspace's icon never deletes a file another row
+            // is still showing.
+            if case .image(let filename) = icon {
+                if assignedFirstImage {
+                    tab.setIcon(WorkspaceIconStore.duplicateImage(filename: filename).map(WorkspaceIcon.image))
+                    continue
+                }
+                assignedFirstImage = true
+            }
+            tab.setIcon(icon)
+        }
+    }
+
     func setWorkspaceTerminalScrollBarHidden(tabId: UUID, hidden: Bool) {
         guard let tab = tabs.first(where: { $0.id == tabId }) else { return }
         tab.setTerminalScrollBarHidden(hidden)

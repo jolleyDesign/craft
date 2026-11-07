@@ -50,6 +50,22 @@ import Testing
         #expect(decision.hasDeferredWorkspaceObservationInvalidation)
     }
 
+    @Test func contextMenuIconChangeUpdatesDisplayedFieldImmediately() {
+        // Setting a workspace icon from the context menu is a stable row
+        // affordance and must show immediately, even while the menu is open.
+        let current = Self.snapshot(title: "ws", icon: nil)
+        let next = Self.snapshot(title: "ws", icon: .symbol("star.fill"))
+
+        let decision = SidebarWorkspaceSnapshotRefreshPolicy.decision(
+            current: current,
+            next: next,
+            force: false,
+            contextMenuVisible: true
+        )
+
+        #expect(decision.workspaceSnapshotStorage?.icon == .symbol("star.fill"))
+    }
+
     @Test func contextMenuImmediateOnlyChangeDoesNotCreateDeferredFlush() {
         let current = Self.snapshot(
             title: "old",
@@ -129,6 +145,7 @@ import Testing
         customDescription: String? = nil,
         isPinned: Bool = false,
         customColorHex: String? = nil,
+        icon: WorkspaceIcon? = nil,
         remoteConnectionStatusText: String = "Disconnected",
         latestConversationMessage: String? = nil,
         listeningPorts: [Int] = [],
@@ -141,6 +158,7 @@ import Testing
             customDescription: customDescription,
             isPinned: isPinned,
             customColorHex: customColorHex,
+            icon: icon,
             remoteWorkspaceSidebarText: nil,
             remoteConnectionStatusText: remoteConnectionStatusText,
             remoteStateHelpText: "",

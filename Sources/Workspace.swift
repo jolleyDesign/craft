@@ -123,6 +123,7 @@ extension Workspace {
             customTitleSource: effectiveCustomTitleSource,
             customDescription: customDescription,
             customColor: customColor,
+            icon: icon?.persisted,
             isPinned: isPinned,
             groupId: groupId,
             isManuallyUnread: isWorkspaceManuallyUnread,
@@ -212,6 +213,7 @@ extension Workspace {
         setCustomTitle(snapshot.customTitle, source: snapshot.customTitleSource ?? .user)
         setCustomDescription(snapshot.customDescription)
         setCustomColor(snapshot.customColor)
+        setIcon(snapshot.icon.flatMap(WorkspaceIcon.init(persisted:)))
         isPinned = snapshot.isPinned
         groupId = snapshot.groupId
 
@@ -2175,6 +2177,9 @@ final class Workspace: Identifiable, ObservableObject {
     /// The group entity itself lives in `TabManager.workspaceGroups`.
     @Published var groupId: UUID?
     @Published var customColor: String?  // hex string, e.g. "#C0392B"
+    /// Optional sidebar icon (SF Symbol, emoji, or stored custom image).
+    /// Persisted in the session manifest and restored alongside `customColor`.
+    @Published var icon: WorkspaceIcon?
     /// User-defined environment variables applied to every shell spawned in this
     /// workspace: the initial terminal, every later pane/surface/split, and every
     /// surface recreated on session restore. Managed `CMUX_*` and terminal-identity
@@ -4369,6 +4374,16 @@ final class Workspace: Identifiable, ObservableObject {
         } else {
             customColor = nil
         }
+    }
+
+    /// Sets (or clears) the workspace icon. When an existing custom image is
+    /// being replaced or cleared, its stored file is deleted to avoid orphans.
+    func setIcon(_ icon: WorkspaceIcon?) {
+        let normalized = icon?.sanitized
+        if case .image(let previousFilename) = self.icon, normalized != self.icon {
+            WorkspaceIconStore.deleteImage(filename: previousFilename)
+        }
+        self.icon = normalized
     }
 
     func setTerminalScrollBarHidden(_ hidden: Bool) {

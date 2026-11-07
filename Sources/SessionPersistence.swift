@@ -1830,6 +1830,11 @@ struct SessionWorkspaceSnapshot: Codable, Sendable {
     var customTitleSource: Workspace.CustomTitleSource? = nil
     var customDescription: String?
     var customColor: String?
+    /// Optional sidebar icon. Stored as a `{ kind, value }` object so a snapshot
+    /// written by a future build with an unknown kind decodes to `nil` rather
+    /// than failing the whole workspace restore. Optional with a `nil` default
+    /// so manifests written before icons existed decode unchanged.
+    var icon: PersistedWorkspaceIcon? = nil
     var isPinned: Bool
     var groupId: UUID? = nil
     var isManuallyUnread: Bool? = nil

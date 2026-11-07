@@ -12905,6 +12905,7 @@ struct SidebarWorkspaceSnapshotBuilder {
         let customDescription: String?
         let isPinned: Bool
         let customColorHex: String?
+        let icon: WorkspaceIcon?
         let remoteWorkspaceSidebarText: String?
         let remoteConnectionStatusText: String
         let remoteStateHelpText: String
@@ -13397,6 +13398,15 @@ struct TabItemView: View, Equatable {
 
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .top, spacing: 8) {
+                if let workspaceIcon = workspaceSnapshot.icon {
+                    WorkspaceIconView(
+                        icon: workspaceIcon,
+                        pointSize: scaledFontSize(13),
+                        tint: workspaceIconTint
+                    )
+                    .accessibilityHidden(true)
+                }
+
                 if unreadCount > 0 {
                     ZStack {
                         Circle()
@@ -14064,6 +14074,49 @@ struct TabItemView: View, Equatable {
             }
         }
 
+        Menu(String(localized: "contextMenu.workspaceIcon", defaultValue: "Workspace Icon")) {
+            if tab.icon != nil {
+                Button {
+                    applyWorkspaceIcon(nil, targetIds: targetIds)
+                } label: {
+                    Label(String(localized: "contextMenu.clearIcon", defaultValue: "Clear Icon"), systemImage: "xmark.circle")
+                }
+                Divider()
+            }
+
+            Button {
+                WorkspaceIconPicker.promptCustomSymbol(tabManager: tabManager, targetIds: targetIds, seed: tab.icon)
+            } label: {
+                Label(String(localized: "contextMenu.chooseSymbol", defaultValue: "Choose Symbol…"), systemImage: "square.grid.2x2")
+            }
+
+            Button {
+                WorkspaceIconPicker.promptEmoji(tabManager: tabManager, targetIds: targetIds, seed: tab.icon)
+            } label: {
+                Label(String(localized: "contextMenu.chooseEmoji", defaultValue: "Choose Emoji…"), systemImage: "face.smiling")
+            }
+
+            Button {
+                WorkspaceIconPicker.chooseImage(tabManager: tabManager, targetIds: targetIds)
+            } label: {
+                Label(String(localized: "contextMenu.chooseImage", defaultValue: "Choose Image…"), systemImage: "photo")
+            }
+
+            Divider()
+
+            ForEach(WorkspaceIconPicker.presetSymbols()) { preset in
+                Button {
+                    applyWorkspaceIcon(.symbol(preset.symbol), targetIds: targetIds)
+                } label: {
+                    Label {
+                        Text(preset.name)
+                    } icon: {
+                        Image(systemName: preset.symbol)
+                    }
+                }
+            }
+        }
+
         if let copyableSidebarSSHError = workspaceSnapshot.copyableSidebarSSHError {
             Button(String(localized: "contextMenu.copySshError", defaultValue: "Copy SSH Error")) {
                 WorkspaceSurfaceIdentifierClipboardText.copy(copyableSidebarSSHError)
@@ -14215,6 +14268,15 @@ struct TabItemView: View, Equatable {
             colorScheme: colorScheme,
             forceBright: activeTabIndicatorStyle == .leftRail
         ) ?? NSColor(hex: hex) ?? .gray
+    }
+
+    /// Tint for an SF Symbol workspace icon: the workspace color when one is
+    /// set, otherwise a secondary text color. Emoji and image icons ignore this.
+    private var workspaceIconTint: Color {
+        if let hex = workspaceSnapshot.customColorHex {
+            return Color(nsColor: tabColorSwatchColor(for: hex))
+        }
+        return activeSecondaryColor(0.9)
     }
 
     private var accessibilityTitle: String {
@@ -14486,6 +14548,7 @@ struct TabItemView: View, Equatable {
             customDescription: settings.showsWorkspaceDescription ? sidebarVisibleCustomDescription : nil,
             isPinned: tab.isPinned,
             customColorHex: tab.customColor,
+            icon: tab.icon,
             remoteWorkspaceSidebarText: remoteWorkspaceSidebarText,
             remoteConnectionStatusText: remoteConnectionStatusText,
             remoteStateHelpText: remoteStateHelpText,
@@ -14873,6 +14936,10 @@ struct TabItemView: View, Equatable {
 
     private func applyTabColor(_ hex: String?, targetIds: [UUID]) {
         tabManager.applyWorkspaceColor(hex, toWorkspaceIds: targetIds)
+    }
+
+    private func applyWorkspaceIcon(_ icon: WorkspaceIcon?, targetIds: [UUID]) {
+        tabManager.setWorkspaceIcon(icon, toWorkspaceIds: targetIds)
     }
 
     private func promptCustomColor(targetIds: [UUID]) {
